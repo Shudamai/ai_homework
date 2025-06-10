@@ -1,0 +1,102 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+import matplotlib as mpl
+
+# 设置matplotlib支持中文显示
+plt.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # Mac系统中文字体
+plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+mpl.rcParams['font.family'] = ['Arial Unicode MS']
+
+# 创建数据集
+data = {
+    '客户编号': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    '年消费金额': [500, 1500, 2000, 100, 3000, 2500, 600, 1800, 1200, 50],
+    '购买频率': [10, 30, 35, 5, 40, 25, 15, 20, 18, 2]
+}
+
+# 创建DataFrame
+df = pd.DataFrame(data)
+print("原始数据：")
+print(df)
+
+# 提取特征
+X = df[['年消费金额', '购买频率']].values
+
+# 数据标准化
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# 应用K-means聚类算法，设置聚类数为3
+kmeans = KMeans(n_clusters=3, random_state=42)
+clusters = kmeans.fit_predict(X_scaled)
+
+# 将聚类结果添加到DataFrame
+df['聚类'] = clusters
+print("\n聚类结果：")
+print(df)
+
+# 计算每个聚类的中心点（转换回原始尺度）
+centroids_scaled = kmeans.cluster_centers_
+centroids = scaler.inverse_transform(centroids_scaled)
+
+# 分析每个聚类的特征
+cluster_stats = df.groupby('聚类').agg({
+    '客户编号': 'count',
+    '年消费金额': ['mean', 'min', 'max'],
+    '购买频率': ['mean', 'min', 'max']
+})
+
+print("\n聚类特征统计：")
+print(cluster_stats)
+
+# 可视化聚类结果
+plt.figure(figsize=(10, 6))
+colors = ['blue', 'green', 'red']
+
+# 绘制散点图
+for i in range(3):
+    plt.scatter(
+        df[df['聚类'] == i]['年消费金额'],
+        df[df['聚类'] == i]['购买频率'],
+        s=100, 
+        c=colors[i],
+        label=f'聚类 {i}'
+    )
+
+# 绘制聚类中心
+plt.scatter(
+    centroids[:, 0], 
+    centroids[:, 1], 
+    s=200, 
+    c='yellow', 
+    marker='*', 
+    label='聚类中心'
+)
+
+# 添加客户编号标签
+for i, txt in enumerate(df['客户编号']):
+    plt.annotate(txt, (df['年消费金额'].iloc[i], df['购买频率'].iloc[i]), 
+                 fontsize=9, ha='right')
+
+plt.title('客户消费行为K均值聚类分析')
+plt.xlabel('年消费金额（元）')
+plt.ylabel('购买频率（次/年）')
+plt.legend()
+plt.grid(True, linestyle='--', alpha=0.7)
+
+plt.tight_layout()
+plt.savefig('kmeans_clusters.png', dpi=300)  # 保存图像到文件
+plt.show()
+
+# 详细分析每个聚类群体的特征
+print("\n各聚类群体特征分析：")
+for i in range(3):
+    cluster_df = df[df['聚类'] == i]
+    print(f"聚类 {i} (包含 {len(cluster_df)} 个客户):")
+    print(f"  客户编号: {', '.join(map(str, cluster_df['客户编号'].values))}")
+    print(f"  平均年消费金额: {cluster_df['年消费金额'].mean():.2f} 元")
+    print(f"  平均购买频率: {cluster_df['购买频率'].mean():.2f} 次/年")
+print()
