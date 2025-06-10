@@ -1,0 +1,113 @@
+import math
+import heapq
+
+# 图的邻接表，包含距离成本和时间成本
+graph = {
+    'A': {'B': (5, 2), 'D': (3, 1), 'E': (6, 3)},
+    'B': {'A': (5, 2), 'C': (5, 3)},
+    'C': {'B': (5, 3)},
+    'D': {'A': (3, 1), 'F': (4, 2)},
+    'E': {'A': (6, 3), 'I': (7, 4), 'G': (3, 1), 'H': (4, 2)},
+    'F': {'D': (4, 2), 'G': (4, 2)},
+    'G': {'F': (4, 2), 'E': (3, 1), 'H': (3, 1), 'K': (5, 3)},
+    'H': {'E': (4, 2), 'J': (7, 4), 'G': (3, 1)},
+    'I': {'E': (7, 4), 'J': (5, 3)},
+    'J': {'I': (5, 3), 'H': (7, 4), 'K': (3, 2)},
+    'K': {'L': (6, 3), 'J': (3, 2), 'G': (5, 3)},
+    'L': {'K': (6, 3)}
+}
+
+# 每个城市的二维坐标 (假设)
+city_coordinates = {
+    'A': (1, 2),
+    'B': (2, 3),
+    'C': (3, 4),
+    'D': (4, 5),
+    'E': (5, 6),
+    'F': (6, 7),
+    'G': (7, 8),
+    'H': (8, 9),
+    'I': (9, 10),
+    'J': (10, 11),
+    'K': (11, 12),
+    'L': (12, 13)
+}
+
+# 目标城市
+goal = 'K'
+
+# 启发式函数：计算城市之间的欧几里得距离
+def heuristic(city1, city2):
+    x1, y1 = city_coordinates[city1]
+    x2, y2 = city_coordinates[city2]
+    return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+# A*搜索算法，考虑距离和时间成本的权重
+def a_star_search(graph, start, goal, heuristic, distance_weight=1, time_weight=1):
+    priority_queue = []
+    heapq.heappush(priority_queue, (0, (0, 0), start))  # 优先队列存储 f_n，g_n，当前城市
+
+    visited = set()
+    g_score = {city: (float('inf'), float('inf')) for city in graph}  # (距离代价, 时间代价)
+    g_score[start] = (0, 0)
+
+    path = {}
+
+    while priority_queue:
+        f_n, g_n, current_city = heapq.heappop(priority_queue)
+
+        if current_city == goal:
+            route = []
+            distances = []  # 用于存储每一段的距离
+            times = []      # 用于存储每一段的时间
+            node = goal
+            while node != start:
+                route.append(node)
+                dist, time = graph[path[node]][node]
+                distances.append(dist)
+                times.append(time)
+                node = path[node]
+            route.append(start)
+            route.reverse()
+            distances.reverse()  # 路径距离需要反转
+            times.reverse()      # 路径时间需要反转
+            total_distance = sum(distances)  # 总距离为每段距离的和
+            total_time = sum(times)          # 总时间为每段时间的和
+            total_cost = distance_weight * total_distance + time_weight * total_time
+            return route, distances, total_distance, times, total_time, total_cost
+
+        if current_city in visited:
+            continue
+        visited.add(current_city)
+
+        for neighbor in graph[current_city]:
+            dist, time = graph[current_city][neighbor]
+            new_g_score = (g_n[0] + dist, g_n[1] + time)  # 累加距离和时间
+            if new_g_score < g_score[neighbor]:
+                g_score[neighbor] = new_g_score
+                h_n = heuristic(neighbor, goal)  # 启发值（从邻居到目标的估算距离）
+                f_n = new_g_score[0] + distance_weight * h_n + time_weight * new_g_score[1]
+                heapq.heappush(priority_queue, (f_n, new_g_score, neighbor))
+                path[neighbor] = current_city
+
+    return None, None, float('inf')
+
+# 起始城市和目标城市
+start = 'A'
+
+# 设置时间和距离的权重
+distance_weight = 2
+time_weight = 1
+
+# 运行A*搜索算法
+route, distances, total_distance, times, total_time, total_cost = a_star_search(graph, start, goal, heuristic, distance_weight, time_weight)
+
+if route:
+    print(f"从{start}到{goal}的最短路径为：{route}")
+    print(f"每一段的行驶距离为：{distances}")
+    print(f"总行驶距离为：{total_distance}")
+    print(f"每一段的行驶时间为：{times}")
+    print(f"总行驶时间为：{total_time}")
+    print(f"考虑距离和时间的总成本为：{total_cost}")
+else:
+    print(f"从{start}到{goal}没有找到路径")
