@@ -1,0 +1,313 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import time
+import random
+from tqdm import tqdm
+import matplotlib
+
+# 确保中文显示正常
+matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
+matplotlib.rcParams['axes.unicode_minus'] = False
+
+class GeneticAlgorithm:
+    def __init__(self, distances, population_size=100, elite_size=20, mutation_rate=0.01, generations=500):
+        """
+        初始化遗传算法
+        
+        参数:
+            distances: 城市间距离矩阵
+            population_size: 种群大小
+            elite_size: 精英个体数量
+            mutation_rate: 变异率
+            generations: 迭代代数
+        """
+        self.distances = distances
+        self.num_cities = len(distances)
+        self.population_size = population_size
+        self.elite_size = elite_size
+        self.mutation_rate = mutation_rate
+        self.generations = generations
+        self.best_distance_history = []
+        self.avg_distance_history = []
+        
+    def create_initial_population(self):
+        """创建初始种群"""
+        population = []
+        for _ in range(self.population_size):
+            # 创建一个随机路径（不包括返回起点）
+            route = list(range(self.num_cities))
+            np.random.shuffle(route)
+            population.append(route)
+        return population
+    
+    def calculate_route_distance(self, route):
+        """计算路径总距离（包括从最后一个城市返回起点）"""
+        distance = 0
+        for i in range(len(route)):
+            from_city = route[i]
+            to_city = route[(i + 1) % len(route)]  # 循环回到起点
+            distance += self.distances[from_city][to_city]
+        return distance
+    
+    def rank_routes(self, population):
+        """对种群中的路径进行排名"""
+        fitness_results = {}
+        for i in range(len(population)):
+            fitness_results[i] = self.calculate_route_distance(population[i])
+        return sorted(fitness_results.items(), key=lambda x: x[1])
+    
+    def selection(self, ranked_population, elite_size):
+        """选择操作，选出优秀个体"""
+        selection_results = []
+        # 选择精英个体
+        for i in range(elite_size):
+            selection_results.append(ranked_population[i][0])
+        
+        # 轮盘赌选择其他个体
+        fitness_values = np.array([1.0/ranked[1] for ranked in ranked_population])
+        fitness_sum = np.sum(fitness_values)
+        probabilities = fitness_values / fitness_sum
+        cumulative_probabilities = np.cumsum(probabilities)
+        
+        # 选择剩余个体
+        for _ in range(self.population_size - elite_size):
+            pick = np.random.random()
+            for i in range(len(ranked_population)):
+                if pick <= cumulative_probabilities[i]:
+                    selection_results.append(ranked_population[i][0])
+                    break
+        
+        return selection_results
+    
+    def mating_pool(self, population, selection_results):
+        """创建交配池"""
+        pool = []
+        for i in selection_results:
+            pool.append(population[i])
+        return pool
+    
+    def ordered_crossover(self, parent1, parent2):
+        """顺序交叉操作"""
+        child = [-1] * len(parent1)
+        
+        # 随机选择交叉区间
+        start, end = sorted(np.random.choice(range(len(parent1)), 2, replace=False))
+        
+        # 从第一个父母复制基因
+        for i in range(start, end + 1):
+            child[i] = parent1[i]
+        
+        # 从第二个父母复制其余基因
+        pointer = 0
+        for i in range(len(parent2)):
+            if parent2[i] not in child:
+                while pointer < len(child) and child[pointer] != -1:
+                    pointer += 1
+                if pointer < len(child):
+                    child[pointer] = parent2[i]
+        
+        return child
+    
+    def breed_population(self, mating_pool, elite_size):
+        """繁殖新一代个体"""
+        children = []
+        
+        # 保留精英个体
+        for i in range(elite_size):
+            children.append(mating_pool[i])
+        
+        # 生成子代
+        for i in range(self.population_size - elite_size):
+            parent1 = random.choice(mating_pool)
+            parent2 = random.choice(mating_pool)
+            child = self.ordered_crossover(parent1, parent2)
+            children.append(child)
+        
+        return children
+    
+    def mutate(self, individual, mutation_rate):
+        """变异操作"""
+        for i in range(len(individual)):
+            if np.random.random() < mutation_rate:
+                j = np.random.randint(0, len(individual))
+                individual[i], individual[j] = individual[j], individual[i]
+        return individual
+    
+    def mutate_population(self, population, mutation_rate):
+        """对种群进行变异"""
+        mutated_population = []
+        for ind in population:
+            mutated = self.mutate(ind.copy(), mutation_rate)
+            mutated_population.append(mutated)
+        return mutated_population
+    
+    def next_generation(self, current_population):
+        """生成下一代种群"""
+        ranked_population = self.rank_routes(current_population)
+        selection_results = self.selection(ranked_population, self.elite_size)
+        mating_pool = self.mating_pool(current_population, selection_results)
+        children = self.breed_population(mating_pool, self.elite_size)
+        next_generation = self.mutate_population(children, self.mutation_rate)
+        return next_generation
+    
+    def solve(self):
+        """求解TSP问题"""
+        print(f"开始求解{self.num_cities}个城市的TSP问题...")
+        start_time = time.time()
+        
+        # 初始化种群
+        population = self.create_initial_population()
+        
+        # 记录初始最佳路径
+        best_route_idx = self.rank_routes(population)[0][0]
+        best_route = population[best_route_idx]
+        best_distance = self.calculate_route_distance(best_route)
+        self.best_distance_history.append(best_distance)
+        
+        # 迭代优化
+        for i in tqdm(range(self.generations)):
+            population = self.next_generation(population)
+            
+            # 记录当前代的最佳路径
+            ranked_population = self.rank_routes(population)
+            best_route_idx = ranked_population[0][0]
+            current_best_route = population[best_route_idx]
+            current_best_distance = self.calculate_route_distance(current_best_route)
+            
+            # 记录平均距离
+            avg_distance = np.mean([self.calculate_route_distance(route) for route in population])
+            self.avg_distance_history.append(avg_distance)
+            
+            # 更新全局最佳路径
+            if current_best_distance < best_distance:
+                best_route = current_best_route
+                best_distance = current_best_distance
+            
+            self.best_distance_history.append(best_distance)
+        
+        end_time = time.time()
+        execution_time = end_time - start_time
+        
+        # 返回最佳路线及距离
+        return best_route, best_distance, execution_time
+    
+    def plot_distance_history(self):
+        """绘制距离历史曲线"""
+        plt.figure(figsize=(10, 6))
+        plt.plot(self.best_distance_history, label='最佳距离')
+        if self.avg_distance_history:
+            plt.plot(self.avg_distance_history, label='平均距离', alpha=0.7)
+        plt.xlabel('迭代次数')
+        plt.ylabel('路径距离')
+        plt.title(f'{self.num_cities}个城市的TSP - 遗传算法收敛曲线')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+    
+    def plot_route(self, route, coordinates=None):
+        """绘制最佳路径"""
+        if coordinates is None:
+            # 如果没有提供坐标，则随机生成坐标用于可视化
+            coordinates = np.random.rand(self.num_cities, 2) * 100
+        
+        plt.figure(figsize=(10, 8))
+        
+        # 绘制城市点
+        for i in range(self.num_cities):
+            plt.scatter(coordinates[i, 0], coordinates[i, 1], s=100, c='red')
+            plt.text(coordinates[i, 0] + 1, coordinates[i, 1] + 1, f'城市{i}', fontsize=10)
+        
+        # 绘制路径
+        for i in range(len(route)):
+            from_city = route[i]
+            to_city = route[(i + 1) % len(route)]
+            plt.plot([coordinates[from_city, 0], coordinates[to_city, 0]], 
+                     [coordinates[from_city, 1], coordinates[to_city, 1]], 'b-')
+        
+        plt.title(f'{self.num_cities}个城市的TSP - 最佳路径')
+        plt.xlabel('X坐标')
+        plt.ylabel('Y坐标')
+        plt.grid(True)
+        plt.show()
+
+
+def generate_random_distances(num_cities):
+    """生成随机距离矩阵"""
+    np.random.seed(42)  # 设置随机种子以获得可重复的结果
+    coordinates = np.random.rand(num_cities, 2) * 100  # 随机生成城市坐标
+    distances = np.zeros((num_cities, num_cities))
+    
+    # 计算欧几里得距离
+    for i in range(num_cities):
+        for j in range(num_cities):
+            if i != j:
+                distances[i, j] = np.sqrt(np.sum((coordinates[i] - coordinates[j]) ** 2))
+    
+    return distances, coordinates
+
+def test_performance():
+    """测试不同规模的TSP问题"""
+    sizes = [10, 20, 30, 50, 100]  # 城市数量
+    results = []
+    
+    for size in sizes:
+        distances, coordinates = generate_random_distances(size)
+        ga = GeneticAlgorithm(
+            distances=distances,
+            population_size=100,
+            elite_size=20,
+            mutation_rate=0.01,
+            generations=500 if size <= 50 else 200  # 更大规模使用较少迭代次数
+        )
+        best_route, best_distance, execution_time = ga.solve()
+        
+        print(f"\n{size}个城市的TSP问题结果:")
+        print(f"最佳路径: {best_route}")
+        print(f"最佳距离: {best_distance:.2f}")
+        print(f"执行时间: {execution_time:.2f}秒")
+        
+        ga.plot_distance_history()
+        ga.plot_route(best_route, coordinates)
+        
+        results.append({
+            'size': size,
+            'distance': best_distance,
+            'time': execution_time
+        })
+    
+    # 绘制性能图表
+    plt.figure(figsize=(12, 5))
+    
+    plt.subplot(1, 2, 1)
+    plt.plot([r['size'] for r in results], [r['distance'] for r in results], 'o-')
+    plt.xlabel('城市数量')
+    plt.ylabel('最佳路径距离')
+    plt.title('城市数量与最佳路径距离关系')
+    plt.grid(True)
+    
+    plt.subplot(1, 2, 2)
+    plt.plot([r['size'] for r in results], [r['time'] for r in results], 'o-')
+    plt.xlabel('城市数量')
+    plt.ylabel('执行时间(秒)')
+    plt.title('城市数量与执行时间关系')
+    plt.grid(True)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return results
+
+# 主函数
+if __name__ == "__main__":
+    # 测试不同规模的TSP问题性能
+    test_performance()
+    
+    # 若需要单独测试某个特定规模
+    # distances, coordinates = generate_random_distances(20)
+    # ga = GeneticAlgorithm(distances=distances)
+    # best_route, best_distance, execution_time = ga.solve()
+    # print(f"\n最佳路径: {best_route}")
+    # print(f"最佳距离: {best_distance:.2f}")
+    # print(f"执行时间: {execution_time:.2f}秒")
+    # ga.plot_distance_history()
+# ga.plot_route(best_route, coordinates)
