@@ -1,0 +1,48 @@
+import tensorflow as tf
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten
+from tensorflow.keras.utils import to_categorical
+import matplotlib.pyplot as plt
+
+# 设置 matplotlib 支持中文字体
+plt.rcParams['font.sans-serif'] = ['SimHei']       # 使用黑体显示中文
+plt.rcParams['axes.unicode_minus'] = False         # 正常显示负号
+# 第一步：加载 MNIST 数据集
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+# 第二步：数据预处理
+x_train = x_train / 255.0  # 像素归一化
+x_test = x_test / 255.0
+y_train = to_categorical(y_train, 10)  # one-hot 编码
+y_test = to_categorical(y_test, 10)
+# 第三步：构建模型（结构简单、效果好）
+model = Sequential([
+    Flatten(input_shape=(28, 28)),       # 展平图像
+    Dense(128, activation='relu'),       # 第一层全连接 + ReLU 激活
+    Dense(64, activation='relu'),        # 第二层全连接 + ReLU 激活
+    Dense(10, activation='softmax')      # 输出层 + Softmax 激活（分类）
+])
+# 第四步：编译模型
+model.compile(optimizer='adam',
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+# 第五步：训练模型，设置训练轮数为 10，避免过拟合
+history = model.fit(x_train, y_train,
+                    epochs=10,
+                    batch_size=32,
+                    verbose=1,
+                    validation_split=0.1)
+# 第六步：评估模型在测试集上的表现
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print("\n测试集准确率：", test_acc)
+# 第七步：绘制训练过程中的准确率变化曲线
+plt.figure(figsize=(8, 5))
+plt.plot(history.history['accuracy'], label='训练准确率')
+plt.plot(history.history['val_accuracy'], label='验证准确率')
+plt.title('训练过程中的准确率变化')
+plt.xlabel('训练轮数（Epoch）')
+plt.ylabel('准确率')
+plt.legend()
+plt.grid(True)
+plt.show()
+
