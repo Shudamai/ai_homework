@@ -1,0 +1,161 @@
+题目一、预测房价
+假设你是一个房地产公司数据分析师，公司的目标是根据一些关键特征预测房屋的价格。公司收集了一些房屋数据，包括每个房屋的面积、卧室数量、建筑年代等特征。请利用这些特征，通过线性回归模型来预测房屋的价格。
+房屋面积（平方米）	卧室数量	建筑年代（年）	房价（万元）
+120	3	2005	350
+85	2	2010	240
+150	4	2000	450
+200	5	2015	600
+95	3	2008	280
+130	3	2012	370
+180	4	2002	480
+160	4	2007	460
+要求：
+1、建立线性回归模型：利用给定的房屋面积、卧室数量和建筑年代来预测房屋价格。
+2、数据标准化（Z-score标准化）：房屋面积是以平方米为单位，卧室数量是整数，而建筑年代是以年份为单位。不同的单位可能会影响回归系数的比较和优化结果
+3、评估模型性能：使用均方误差（MSE）作为评估指标，评估模型的预测能力。
+4、模型解释：给出每个特征的回归系数，并解释每个特征对房价预测的影响。
+比如，房屋面积对房价的影响是否较大？卧室数量和建筑年代对房价的影响如何？
+5、假设有一个新的数据点是：房屋面积500平米、房间数量8个、建筑年代2023年，请给出房屋的售价预测值。
+
+题目二、使用决策树预测是否购买商品
+一家电商平台想要预测用户是否会购买某一商品，基于用户的个人信息和浏览行为。电商平台希望根据用户的 年龄、月收入、是否已购买过其他产品和浏览时间等信息来预测用户是否购买该商品。
+年龄 (岁)	月收入
+(万元)	是否已购买过其他产品	浏览时间
+(分钟)	是否购买该商品
+(1表示购买，0表示未购买)
+25	5	否	10	0
+30	8	是	20	1
+35	12	是	15	1
+40	15	否	5	0
+45	20	是	30	1
+50	25	否	8	0
+28	6	否	12	0
+32	9	是	25	1
+36	14	是	18	1
+38	18	否	10	0
+要求：
+1、数据预处理：对数据进行预处理（如需要的话），确保适合用于决策树模型训练。
+2、训练决策树模型：使用决策树算法对数据进行分类训练，预测用户是否会购买该商品。
+3、模型评估：评估模型的性能，包括计算准确率、混淆矩阵等。
+4、应用决策树模型：对于以下一个新用户（年龄：33岁、月收入：10万元、是否已购买过其他产品：是、浏览时间：22分钟），请预测该用户是否会购买该商品。
+提示：可采用sklearn库，通过pip install scikit-learn安装
+
+
+
+
+题目三：K均值聚类分析客户消费行为
+假设你是一个电商平台的数据分析师，你的任务是根据客户的消费数据对其进行聚类分析，从而找到不同类型的客户群体。这些群体可以帮助电商平台为不同的客户群体定制个性化营销策略。
+以下是一个简化的数据集，记录了客户的年消费金额（单位：元）和购买频率（单位：次/年）。你需要根据这些特征将客户分为若干个不同的群体（K个群体）。
+客户编号	年消费金额（元）	购买频率（次/年）
+1	500	10
+2	1500	30
+3	2000	35
+4	100	5
+5	3000	40
+6	2500	25
+7	600	15
+8	1800	20
+9	1200	18
+10	50	2
+要求：
+1、使用 K均值聚类（K-means）算法对这些客户进行聚类，假设你选择的聚类数为 3。
+2、画出聚类的结果，标明每个客户所属的群体。
+3、分析每个群体的特征（例如，消费金额、购买频率等）。 
+
+提示：pip install pandas
+pip install matplotlib
+
+
+
+
+
+sklearn（也叫做 scikit-learn）是一个用于机器学习和数据分析的强大 Python 库。它提供了许多工具和功能，广泛应用于数据预处理、监督学习、无监督学习、模型选择、评估等各个方面。以下是 scikit-learn 的主要模块和功能概述：
+①　分类 (Classification)
+
+
+常见分类模型：
+LogisticRegression（逻辑回归）
+DecisionTreeClassifier（决策树）
+RandomForestClassifier（随机森林分类器）
+SVM（支持向量机分类器）
+KNeighborsClassifier（K近邻分类器）
+NaiveBayes（朴素贝叶斯分类器）
+GradientBoostingClassifier（梯度提升分类器）
+②　 回归 (Regression)
+常见回归模型：
+LinearRegression（线性回归）
+DecisionTreeRegressor（决策树回归）
+RandomForestRegressor（随机森林回归）
+SVR（支持向量回归）
+KNeighborsRegressor（K近邻回归）
+Lasso（套索回归）
+Ridge（岭回归）
+③　 聚类 (Clustering)
+常见聚类算法：
+KMeans（K均值）
+AgglomerativeClustering（层次聚类）
+DBSCAN（基于密度的空间聚类）
+MeanShift（均值漂移聚类）
+SpectralClustering（谱聚类）
+④　 降维 (Dimensionality Reduction)
+常见降维方法：
+PCA（主成分分析）
+SVD（奇异值分解）
+t-SNE（t-分布邻域嵌入）
+LinearDiscriminantAnalysis（线性判别分析）
+⑤　模型选择 (Model Selection)
+常见模型选择工具：
+train_test_split（数据划分）
+GridSearchCV（网格搜索交叉验证）
+RandomizedSearchCV（随机搜索交叉验证）
+cross_val_score（交叉验证评分）
+⑥　数据预处理 (Preprocessing)
+常见预处理工具：
+StandardScaler（标准化）
+MinMaxScaler（归一化）
+OneHotEncoder（独热编码）
+LabelEncoder（标签编码）
+SimpleImputer（填充缺失值）
+PolynomialFeatures（多项式特征扩展）
+Binarizer（二值化特征）
+⑦　模型评估 (Model Evaluation)
+常见评估方法：
+accuracy_score（准确率）
+precision_score（精确度）
+recall_score（召回率）
+f1_score（F1分数）
+confusion_matrix（混淆矩阵）
+roc_curve（ROC曲线）
+classification_report（分类报告）
+mean_squared_error（均方误差）
+⑧　特征选择 (Feature Selection)
+常见特征选择方法：
+SelectKBest（选择K个最佳特征）
+RFE（递归特征消除）
+SelectFromModel（从模型中选择特征）
+⑨　管道 (Pipelines)
+管道工具：
+Pipeline（流水线）
+FeatureUnion（特征合并）
+⑩　集成方法 (Ensemble Methods)
+常见集成方法：
+RandomForest（随机森林）
+AdaBoost（自适应提升）
+GradientBoosting（梯度提升）
+VotingClassifier（投票分类器）
+
+⑪　支持向量机 (SVM)
+支持向量机是常用的分类和回归算法，用于处理高维数据。
+SVM相关工具：
+SVC（支持向量分类）
+SVR（支持向量回归）
+SVC（支持向量分类器）
+⑫　特殊算法 (Specialized Algorithms)
+scikit-learn 还包含了一些其他用于特殊任务的算法和工具，例如生成对抗网络（GANs）、多层感知器（MLP）等。
+常见特殊算法：
+MLPClassifier（多层感知器分类器）
+MLPRegressor（多层感知器回归）
+⑬　数据流处理与转换 (Feature Engineering)
+sklearn 提供了许多用于特征工程和转换的工具，例如：
+特征提取：从文本数据中提取特征（例如使用 TfidfVectorizer 或 CountVectorizer）。
+数据变换：例如，离散化、特征缩放、数据编码等。
