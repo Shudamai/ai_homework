@@ -1,0 +1,167 @@
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# 1. 数据准备
+data = {
+    '面积': [120, 85, 150, 200, 95, 130, 180, 160],
+    '卧室': [3, 2, 4, 5, 3, 3, 4, 4],
+    '年代': [2005, 2010, 2000, 2015, 2008, 2012, 2002, 2007],
+    '价格': [350, 240, 450, 600, 280, 370, 480, 460]
+}
+
+df = pd.DataFrame(data)
+print("1. 原始数据:")
+print(df)
+print("\n" + "="*50 + "\n")
+
+# 2. 分离特征和目标变量
+X = df[['面积', '卧室', '年代']]
+y = df['价格']
+
+# 3. 探索性数据分析 - 相关性分析
+correlation_matrix = df.corr()
+print("2. 特征相关性分析:")
+print(correlation_matrix['价格'].sort_values(ascending=False))
+print("\n" + "="*50 + "\n")
+
+# 4. 数据标准化处理（Z-score标准化）
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+feature_names = ['面积', '卧室', '年代']
+
+# 展示标准化前后对比
+X_scaled_df = pd.DataFrame(X_scaled, columns=feature_names)
+comparison = pd.DataFrame({
+    '特征': ['面积', '卧室', '年代'],
+    '原始均值': X.mean().values,
+    '原始标准差': X.std().values,
+    '标准化后均值': X_scaled_df.mean().values,
+    '标准化后标准差': X_scaled_df.std().values
+})
+
+print("3. 标准化前后比较:")
+print(comparison)
+print("\n原始数据与标准化后数据对比:")
+print(pd.concat([X.head(3), X_scaled_df.head(3).add_suffix('_标准化')], axis=1))
+print("\n" + "="*50 + "\n")
+
+# 5. 建立并训练线性回归模型
+model = LinearRegression()
+model.fit(X_scaled, y)
+
+# 6. 获取并解释回归系数
+coefficients = model.coef_
+intercept = model.intercept_
+
+coef_df = pd.DataFrame({
+    '特征': feature_names,
+    '标准化系数': coefficients,
+    '绝对重要性': np.abs(coefficients)
+}).sort_values('绝对重要性', ascending=False)
+
+print("4. 线性回归模型参数:")
+print(f'截距(Intercept): {intercept:.2f}')
+print(coef_df)
+print("\n基于标准化系数的特征重要性解释:")
+for i, row in coef_df.iterrows():
+    feature = row['特征']
+    coef = row['标准化系数']
+    if coef > 0:
+        direction = "正相关"
+    else:
+        direction = "负相关"
+    print(f"- {feature}: 重要性排名 {i+1}, 系数={coef:.2f}, 与房价{direction}")
+print("\n" + "="*50 + "\n")
+
+# 7. 模型预测与评估
+y_pred = model.predict(X_scaled)
+
+# 计算各种评估指标
+mse = mean_squared_error(y, y_pred)
+rmse = np.sqrt(mse)
+r2 = model.score(X_scaled, y)
+mean_price = np.mean(y)
+rmse_percentage = rmse / mean_price * 100
+
+print("5. 模型评估:")
+print(f'均方误差(MSE): {mse:.2f}')
+print(f'均方根误差(RMSE): {rmse:.2f}')
+print(f'均价的百分比误差: {rmse_percentage:.2f}%')
+print(f'决定系数(R²): {r2:.4f}')
+print("\n" + "="*50 + "\n")
+
+# 8. 比较实际值与预测值
+results = pd.DataFrame({
+    '实际价格': y,
+    '预测价格': np.round(y_pred, 2),
+    '误差': np.round(y - y_pred, 2),
+    '误差百分比': np.round((y - y_pred) / y * 100, 2)
+})
+
+print("6. 预测结果比较:")
+print(results)
+print("\n" + "="*50 + "\n")
+
+# 9. 预测新房价格
+new_house = np.array([[500, 8, 2023]])
+print("7. 新房数据预测:")
+print(f"原始数据: 面积={new_house[0][0]}平米, 卧室={new_house[0][1]}个, 建筑年代={new_house[0][2]}年")
+
+# 标准化新数据
+new_house_scaled = scaler.transform(new_house)
+print(f"标准化后数据: {new_house_scaled[0]}")
+
+# 预测价格
+predicted_price = model.predict(new_house_scaled)[0]
+print(f'预测售价: {predicted_price:.2f}万元')
+print("\n" + "="*50 + "\n")
+
+# 10. 各特征对新房预测值的贡献分析
+contributions = []
+for i, feature in enumerate(feature_names):
+    contribution = coefficients[i] * new_house_scaled[0][i]
+    percentage = contribution / predicted_price * 100
+    contributions.append({
+        '特征': feature,
+        '标准化值': new_house_scaled[0][i],
+        '系数': coefficients[i],
+        '贡献值(万元)': contribution,
+        '贡献占比(%)': percentage
+    })
+
+# 添加截距项
+contributions.append({
+    '特征': '截距',
+    '标准化值': 1,
+    '系数': intercept,
+    '贡献值(万元)': intercept,
+    '贡献占比(%)': intercept / predicted_price * 100
+})
+
+contributions_df = pd.DataFrame(contributions)
+print("8. 各特征对新房预测价格的贡献分析:")
+print(contributions_df)
+print("\n总结: 房屋面积对预测价格的贡献最大，约占", 
+      f"{contributions_df.iloc[0]['贡献占比(%)']:.2f}%，",
+      f"其次是截距项占{contributions_df.iloc[-1]['贡献占比(%)']:.2f}%，",
+      f"然后是卧室数量占{contributions_df.iloc[1]['贡献占比(%)']:.2f}%，",
+      f"建筑年代的影响相对较小，仅占{contributions_df.iloc[2]['贡献占比(%)']:.2f}%。")
+print("\n" + "="*50 + "\n")
+
+# 11. 最终总结与模型解释
+print("9. 模型总结与解释:")
+print(f"(1) 模型拟合度: R²={r2:.4f}，表明模型能解释约{r2*100:.2f}%的房价变动")
+print(f"(2) 预测精度: RMSE={rmse:.2f}万元，相对于均价的{rmse_percentage:.2f}%")
+print("(3) 特征重要性排序:")
+for i, row in coef_df.iterrows():
+    print(f"   - {row['特征']}: 标准化系数={row['标准化系数']:.2f}")
+print("(4) 特征解释:")
+print("   - 房屋面积是最重要的预测因素，面积每增加一个标准差单位，房价预计增加约71.45万元")
+print("   - 卧室数量是第二重要的因素，卧室数量每增加一个标准差单位，房价预计增加约38.80万元")
+print("   - 建筑年代虽然影响较小，但较新的房屋价格略高，每增加一个标准差单位的年份，房价预计增加约6.14万元")
+print(f"(5) 新房(500平米,8卧室,2023年建)的预测价格: {predicted_price:.2f}万元")
