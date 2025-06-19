@@ -1,0 +1,369 @@
+import pandas as pd
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+from sklearn import tree
+import seaborn as sns
+from matplotlib.font_manager import FontProperties
+import matplotlib as mpl
+
+# 设置Mac上中文显示 - 使用自带的字体
+# 检查可用字体
+import matplotlib.font_manager as fm
+
+# 定义中英文标签映射，无论是否找到中文字体都初始化它
+label_map = {
+    '年龄': 'Age',
+    '月收入': 'Monthly Income',
+    '是否已购买过其他产品': 'Previous Purchase',
+    '浏览时间': 'Browsing Time',
+    '是否购买该商品': 'Purchase Decision',
+    '不购买': 'No Purchase',
+    '购买': 'Purchase'
+}
+
+# Mac系统常见中文字体，尝试多种选择
+possible_fonts = ['Arial Unicode MS', 'PingFang SC', 'Heiti SC', 'Hiragino Sans GB', 'STHeiti', 'Microsoft YaHei']
+
+# 遍历可用字体，找到可用的中文字体
+font_found = False
+for font_name in possible_fonts:
+    font_path = fm.findfont(FontProperties(family=font_name))
+    if font_path and ('ttf' in font_path.lower() or 'ttc' in font_path.lower()):
+        plt.rcParams['font.family'] = font_name
+        print(f"使用字体: {font_name}")
+        font_found = True
+        break
+
+# 根据是否找到中文字体决定使用中文还是英文
+use_chinese = font_found
+print(f"{'使用中文显示' if use_chinese else '使用英文显示'}")
+
+# 避免负号显示问题
+plt.rcParams['axes.unicode_minus'] = False
+
+print("="*50)
+print("电商平台用户购买预测 - 决策树模型")
+print("="*50)
+
+# 1. 数据预处理
+# 创建数据集
+data = {
+    '年龄': [25, 30, 35, 40, 45, 50, 28, 32, 36, 38],
+    '月收入': [5, 8, 12, 15, 20, 25, 6, 9, 14, 18],
+    '是否已购买过其他产品': ['否', '是', '是', '否', '是', '否', '否', '是', '是', '否'],
+    '浏览时间': [10, 20, 15, 5, 30, 8, 12, 25, 18, 10],
+    '是否购买该商品': [0, 1, 1, 0, 1, 0, 0, 1, 1, 0]
+}
+
+# 创建DataFrame
+df = pd.DataFrame(data)
+
+# 打印数据集基本信息
+print("\n1. 数据集基本信息:")
+print("-"*30)
+print(df.info())
+print("\n数据集统计描述:")
+print(df.describe())
+print("\n数据集样本:")
+print(df)
+
+# 如果需要英文标签，转换DataFrame列名
+if not use_chinese:
+    df_viz = df.copy()
+    df_viz.columns = [label_map.get(col, col) for col in df_viz.columns]
+    purchase_col = label_map.get('是否购买该商品')
+    previous_purchase_col = label_map.get('是否已购买过其他产品')
+else:
+    df_viz = df
+    purchase_col = '是否购买该商品'
+    previous_purchase_col = '是否已购买过其他产品'
+
+# 数据可视化，探索不同特征与目标变量的关系
+plt.figure(figsize=(15, 10))
+
+# 年龄与购买情况的关系
+plt.subplot(2, 2, 1)
+age_col = label_map.get('年龄') if not use_chinese else '年龄'
+sns.boxplot(x=purchase_col, y=age_col, data=df_viz)
+plt.title('Age Distribution by Purchase Decision' if not use_chinese else '不同购买结果的年龄分布')
+if not use_chinese:
+    plt.xlabel('Purchase Decision (0=No, 1=Yes)')
+else:
+    plt.xlabel('购买决策 (0=否, 1=是)')
+
+# 月收入与购买情况的关系
+plt.subplot(2, 2, 2)
+income_col = label_map.get('月收入') if not use_chinese else '月收入'
+sns.boxplot(x=purchase_col, y=income_col, data=df_viz)
+plt.title('Monthly Income Distribution by Purchase Decision' if not use_chinese else '不同购买结果的月收入分布')
+if not use_chinese:
+    plt.xlabel('Purchase Decision (0=No, 1=Yes)')
+else:
+    plt.xlabel('购买决策 (0=否, 1=是)')
+
+# 浏览时间与购买情况的关系
+plt.subplot(2, 2, 3)
+time_col = label_map.get('浏览时间') if not use_chinese else '浏览时间'
+sns.boxplot(x=purchase_col, y=time_col, data=df_viz)
+plt.title('Browsing Time Distribution by Purchase Decision' if not use_chinese else '不同购买结果的浏览时间分布')
+if not use_chinese:
+    plt.xlabel('Purchase Decision (0=No, 1=Yes)')
+else:
+    plt.xlabel('购买决策 (0=否, 1=是)')
+
+# 是否已购买过其他产品与购买情况的关系
+plt.subplot(2, 2, 4)
+# 转换为数值，并制作条形图
+if not use_chinese:
+    # 英文版
+    purchase_counts = pd.crosstab(df['是否已购买过其他产品'], df['是否购买该商品'])
+    purchase_counts.index = ['No', 'Yes'] if len(purchase_counts) > 1 else ['No']
+    purchase_counts.columns = ['No Purchase', 'Purchase']
+else:
+    # 中文版
+    purchase_counts = pd.crosstab(df['是否已购买过其他产品'], df['是否购买该商品'])
+    purchase_counts.index = ['否', '是'] if len(purchase_counts) > 1 else ['否']
+    purchase_counts.columns = ['不购买', '购买']
+
+purchase_counts.plot(kind='bar', stacked=True)
+plt.title('Previous Purchase vs Current Purchase Decision' if not use_chinese else '已购买过产品与当前购买决策的关系')
+if not use_chinese:
+    plt.xlabel('Previous Purchase')
+    plt.ylabel('Number of Users')
+else:
+    plt.xlabel('是否已购买过其他产品')
+    plt.ylabel('用户数量')
+plt.tight_layout()
+plt.savefig('feature_analysis.png')  # 使用英文文件名避免路径问题
+plt.close()
+
+print("\n特征数据可视化分析已保存至'feature_analysis.png'")
+
+# 将类别特征转换为数值型
+le = LabelEncoder()
+df['是否已购买过其他产品'] = le.fit_transform(df['是否已购买过其他产品'])  # '是'转为1，'否'转为0
+print(f"\n类别特征编码: '是' -> {le.transform(['是'])[0]}, '否' -> {le.transform(['否'])[0]}")
+
+# 分离特征和目标变量
+X = df.drop('是否购买该商品', axis=1)
+y = df['是否购买该商品']
+
+# 2. 训练决策树模型
+print("\n2. 训练决策树模型")
+print("-"*30)
+
+# 尝试不同的决策树参数
+best_accuracy = 0
+best_depth = 0
+best_model = None
+
+# 用于存储不同参数下的准确率
+depths = list(range(1, 6))  # 从1到5的深度
+accuracies = []
+
+for depth in depths:
+    model = DecisionTreeClassifier(max_depth=depth, random_state=42)
+    # 使用5折交叉验证评估模型
+    scores = cross_val_score(model, X, y, cv=5, scoring='accuracy')
+    mean_accuracy = np.mean(scores)
+    accuracies.append(mean_accuracy)
+    
+    print(f"决策树深度 {depth} 的交叉验证平均准确率: {mean_accuracy:.4f}")
+    
+    if mean_accuracy > best_accuracy:
+        best_accuracy = mean_accuracy
+        best_depth = depth
+
+# 使用最佳深度训练模型
+print(f"\n选择最佳决策树深度: {best_depth}，预期准确率: {best_accuracy:.4f}")
+model = DecisionTreeClassifier(max_depth=best_depth, random_state=42)
+model.fit(X, y)
+
+# 绘制不同深度的准确率曲线
+plt.figure(figsize=(10, 6))
+plt.plot(depths, accuracies, marker='o')
+plt.title('Accuracy for Different Tree Depths' if not use_chinese else '不同决策树深度的准确率')
+plt.xlabel('Maximum Tree Depth' if not use_chinese else '决策树最大深度')
+plt.ylabel('Cross-validation Average Accuracy' if not use_chinese else '交叉验证平均准确率')
+plt.grid(True)
+plt.savefig('depth_parameter_analysis.png')  # 英文文件名
+plt.close()
+
+print("决策树深度参数分析已保存至'depth_parameter_analysis.png'")
+
+# 3. 模型评估
+print("\n3. 模型评估")
+print("-"*30)
+
+# 在训练数据上进行预测
+y_pred = model.predict(X)
+
+# 计算准确率
+accuracy = accuracy_score(y, y_pred)
+print(f"模型准确率: {accuracy:.4f}")
+
+# 计算混淆矩阵并可视化
+cm = confusion_matrix(y, y_pred)
+print("\n混淆矩阵:")
+print(cm)
+
+# 混淆矩阵可视化
+plt.figure(figsize=(8, 6))
+if not use_chinese:
+    labels = ['No Purchase (0)', 'Purchase (1)']
+else:
+    labels = ['不购买(0)', '购买(1)']
+    
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+            xticklabels=labels, 
+            yticklabels=labels)
+plt.xlabel('Predicted Label' if not use_chinese else '预测值')
+plt.ylabel('True Label' if not use_chinese else '真实值')
+plt.title('Confusion Matrix' if not use_chinese else '混淆矩阵')
+plt.tight_layout()
+plt.savefig('confusion_matrix.png')  # 英文文件名
+plt.close()
+
+print("混淆矩阵可视化已保存至'confusion_matrix.png'")
+
+# 生成分类报告
+report = classification_report(y, y_pred)
+print("\n分类报告:")
+print(report)
+
+# 英文化特征名称以便在决策树可视化中使用
+if not use_chinese:
+    feature_names = [label_map.get(col, col) for col in X.columns]
+    class_names = [label_map.get('不购买'), label_map.get('购买')]
+else:
+    feature_names = X.columns
+    class_names = ['不购买', '购买']
+
+# 可视化决策树
+plt.figure(figsize=(12, 8))
+tree.plot_tree(model, feature_names=feature_names, class_names=class_names, 
+               filled=True, rounded=True, fontsize=10)
+plt.title("Decision Tree Model Visualization" if not use_chinese else "决策树模型可视化")
+plt.tight_layout()
+plt.savefig('decision_tree_model.png')  # 英文文件名
+plt.close()
+
+print("决策树模型可视化已保存至'decision_tree_model.png'")
+
+# 特征重要性分析
+if not use_chinese:
+    feature_names_eng = [label_map.get(col, col) for col in X.columns]
+    feature_importance = pd.DataFrame({
+        'Feature': feature_names_eng, 
+        'Importance': model.feature_importances_
+    })
+    feature_importance = feature_importance.sort_values(by='Importance', ascending=False)
+else:
+    feature_importance = pd.DataFrame({
+        '特征': X.columns, 
+        '重要性': model.feature_importances_
+    })
+    feature_importance = feature_importance.sort_values(by='重要性', ascending=False)
+
+print("\n特征重要性:")
+print(feature_importance)
+
+# 可视化特征重要性
+plt.figure(figsize=(10, 6))
+if not use_chinese:
+    sns.barplot(x='Importance', y='Feature', data=feature_importance)
+    plt.title('Feature Importance Ranking')
+else:
+    sns.barplot(x='重要性', y='特征', data=feature_importance)
+    plt.title('特征重要性排序')
+plt.tight_layout()
+plt.savefig('feature_importance.png')  # 英文文件名
+plt.close()
+
+print("特征重要性可视化已保存至'feature_importance.png'")
+
+# 4. 应用决策树模型进行预测
+print("\n4. 新用户购买预测")
+print("-"*30)
+
+# 新用户数据: 年龄33岁、月收入10万元、已购买过其他产品、浏览时间22分钟
+new_user = pd.DataFrame({
+    '年龄': [33],
+    '月收入': [10],
+    '是否已购买过其他产品': [1],  # '是'已转换为1
+    '浏览时间': [22]
+})
+
+# 预测新用户是否会购买商品
+prediction = model.predict(new_user)
+probability = model.predict_proba(new_user)
+
+print("\n新用户信息:")
+print(f"年龄: 33岁, 月收入: 10万元, 是否已购买过其他产品: 是, 浏览时间: 22分钟")
+print(f"预测结果: {'购买' if prediction[0] == 1 else '不购买'}")
+print(f"购买概率: {probability[0][1]:.4f}, 不购买概率: {probability[0][0]:.4f}")
+
+# 解释决策路径
+print("\n决策路径解释:")
+# 获取决策路径
+node_indicator = model.decision_path(new_user)
+# 获取叶子节点
+leaf_id = model.apply(new_user)
+
+# 从根节点到叶子节点的路径
+feature = model.tree_.feature
+threshold = model.tree_.threshold
+
+# 获取决策路径
+node_index = node_indicator.indices[node_indicator.indptr[0]:node_indicator.indptr[1]]
+
+# 映射特征名称（处理可能的中英文转换）
+feature_name_map = dict(zip(range(len(X.columns)), X.columns))
+if not use_chinese:
+    # 如果使用英文，需要将决策路径中的特征名也转为英文
+    feature_name_map_eng = dict(zip(range(len(X.columns)), 
+                                  [label_map.get(X.columns[i], X.columns[i]) for i in range(len(X.columns))]))
+
+# 打印决策路径
+for i, node_id in enumerate(node_index):
+    # 如果是叶子节点
+    if leaf_id[0] == node_id:
+        values = model.tree_.value[node_id][0]
+        class_probabilities = values / np.sum(values)
+        print(f"决策结果: {'购买' if model.tree_.value[node_id][0][1] > model.tree_.value[node_id][0][0] else '不购买'}")
+        print(f"叶子节点中样本分布: 不购买: {values[0]:.0f}个, 购买: {values[1]:.0f}个")
+        print(f"类别概率: 不购买: {class_probabilities[0]:.4f}, 购买: {class_probabilities[1]:.4f}")
+        continue
+        
+    # 如果不是叶子节点
+    if new_user.iloc[0, feature[node_id]] <= threshold[node_id]:
+        threshold_sign = "<="
+    else:
+        threshold_sign = ">"
+    
+    # 获取当前节点的特征名称，根据是否使用英文标签选择
+    if not use_chinese:
+        feature_name = feature_name_map_eng[feature[node_id]]
+    else:
+        feature_name = feature_name_map[feature[node_id]]
+        
+    print(f"决策条件 {i+1}: {feature_name} {threshold_sign} {threshold[node_id]:.4f}")
+
+# 总结
+print("\n5. 模型总结")
+print("-"*30)
+print(f"1. 模型准确率: {accuracy:.4f}")
+if not use_chinese:
+    important_feature = feature_importance.iloc[0]['Feature']
+    importance_value = feature_importance.iloc[0]['Importance']
+else:
+    important_feature = feature_importance.iloc[0]['特征']
+    importance_value = feature_importance.iloc[0]['重要性']
+print(f"2. 最重要的特征: {important_feature} (重要性: {importance_value:.4f})")
+print(f"3. 对于新用户(33岁, 月收入10万元, 已购买过产品, 浏览时间22分钟)的预测结果: {'购买' if prediction[0] == 1 else '不购买'}")
+print(f"4. 模型复杂度: 深度为{best_depth}的决策树")
+print("="*50)

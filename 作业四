@@ -1,0 +1,109 @@
+第五章课内实践
+一、深度学习常用概念及解释
+概念	中文名称	解释
+Neuron (神经元)	神经元	深度网络的基本单元，接收输入、进行加权求和并通过激活函数输出结果。
+Layer (层)	层	神经元的集合，常见类型包括全连接层、卷积层、池化层等。
+Activation Function	激活函数	增加网络的非线性表达能力，常用的有 ReLU、Sigmoid、Tanh、Softmax 等。
+Loss Function (损失函数)	损失函数	衡量模型预测值与真实值之间差距的函数。分类常用交叉熵，回归常用均方误差。
+Optimizer (优化器)	优化器	用于更新模型参数，使损失函数值逐步减小，如 SGD、Adam、RMSprop 等。
+Epoch	轮次	一轮训练中，模型看完了整个训练集一次。
+Batch / Mini-batch	批	一次训练中使用的数据子集，batch size 是批大小的意思。
+Forward Propagation	前向传播	数据从输入层流向输出层，计算输出值。
+Backward Propagation (Backprop)	反向传播	计算梯度并更新权重，是训练神经网络的核心步骤。
+Gradient Descent	梯度下降	最常见的优化方法，通过梯度下降来最小化损失函数。
+Overfitting	过拟合	模型在训练集上表现很好，但在测试集上效果差。
+Underfitting	欠拟合	模型在训练集和测试集上都表现不好，说明模型容量不够。
+Regularization	正则化	防止过拟合的技术，如 L1/L2 正则项、Dropout 等。
+Dropout	随机失活	训练时随机屏蔽神经元，降低过拟合风险。
+Convolutional Neural Network (CNN)	卷积神经网络	用于图像处理，包含卷积层、池化层、全连接层等。
+Recurrent Neural Network (RNN)	循环神经网络	用于处理序列数据，如文本、时间序列等。
+Long Short-Term Memory (LSTM)	长短期记忆网络	一种特殊的 RNN，解决长距离依赖问题。
+Transformer	Transformer 结构	用于自然语言处理，完全基于注意力机制。
+Attention Mechanism	注意力机制	允许模型在处理序列时专注于关键部分。
+Transfer Learning	迁移学习	利用预训练模型在新任务上加速训练。
+Fine-tuning	微调	在预训练模型的基础上继续训练以适配新数据。
+Pretraining	预训练	模型先在大数据集上训练，再迁移到目标任务上。
+Gradient Vanishing / Exploding	梯度消失 / 爆炸	在深层网络中梯度过小或过大，常见于 RNN。
+Batch Normalization	批归一化	加速训练，提高模型稳定性的一种技术。
+Learning Rate	学习率	控制每次更新权重的步长，过大或过小都不利于训练。
+
+如果你需要我针对某些概念画图解释或提供例子（如 CNN、RNN、Transformer 等），我也可以补充图解或代码。你想深入了解哪些部分？
+二、 PyTorch、TensorFlow 和 Keras 三大主流深度学习框架
+下面从语法风格、灵活性、社区支持、部署能力等多个角度进行分析。
+✅ 基本介绍
+框架	简介
+PyTorch	Facebook 开发的动态图深度学习框架，代码更接近 Python 原生风格。
+TensorFlow	Google 开发的计算图深度学习框架，早期使用静态图，2.x版本之后默认启用动态图（Eager Execution）。
+Keras	最初是一个独立的高级 API，后来集成入 TensorFlow 中（tf.keras），设计简洁，易于上手。
+1. 编码风格与易用性
+维度	PyTorch	TensorFlow	Keras (tf.keras)
+编码风格	接近 Python 原生，面向对象，灵活	早期复杂，2.x 后接近 PyTorch	更简洁，高抽象级别
+学习曲线	中等偏上，适合有编程经验的开发者	2.x 相对简单，1.x 难度大	最容易上手，API 封装完善
+灵活性	非常强，适合研究和定制	2.x 已大幅改进，但仍略复杂	较弱，适合标准任务
+2. 模型构建方式
+方式	PyTorch	TensorFlow	Keras (tf.keras)
+定义模型	使用 nn.Module 自定义	使用 tf.keras.Model	使用 Sequential 或自定义模型
+动态图支持	✅ 默认动态图（即时执行）	✅ 2.x 开始支持	✅ 自动开启动态图模式
+静态图支持	❌（可使用 torch.jit 实现）	✅ @tf.function 支持静态图	✅ 同 TensorFlow
+3. 调试与开发体验
+维度	PyTorch	TensorFlow	Keras
+调试便利性	✅ 非常直观，支持标准 Python 调试	中等，动态图方便，静态图不直观	✅ 抽象多，但较易定位错误
+错误信息提示	清晰	有时较冗长	简洁明了
+
+4. 训练与部署支持
+维度	PyTorch	TensorFlow	Keras (tf.keras)
+多 GPU 支持	✅ 使用 DataParallel 或 DDP	✅ 原生支持多卡训练	✅ 同 TensorFlow
+分布式训练	✅ 使用 torch.distributed	✅ tf.distribute.Strategy 完善	✅ 简化封装
+部署方式	ONNX、TorchScript、C++、iOS/Android	TensorFlow Serving、Lite、JS、TFLite	✅ 继承 TensorFlow 的部署方式
+5. 社区与生态支持
+维度	PyTorch	TensorFlow	Keras (tf.keras)
+社区活跃度	非常活跃，研究领域使用广泛	非常活跃，工业界部署使用多	活跃度高，但主要作为 TensorFlow 前端
+文档质量	优秀，代码例子多	官方文档多，例子复杂	简洁明了，新手友好
+预训练模型支持	✅ torchvision、huggingface 等	✅ tfhub、keras.applications	✅ 模型库丰富
+6. 用例场景推荐
+用例	推荐框架	理由
+研究、论文复现	PyTorch	动态图灵活，调试方便
+工业部署、高性能训练	TensorFlow	分布式能力强、部署工具链成熟
+教学、新手入门	Keras (tf.keras)	简洁、API直观
+
+7、学习建议
+学习主体	推荐框架	理由
+新手想快速上手	Keras (tf.keras)	快速构建和训练模型
+研究人员/博士生	PyTorch	灵活性强，方便实验和调试
+企业工程师	TensorFlow	生态强大，部署便捷
+边缘设备开发	TensorFlow Lite	支持手机、IoT 等设备
+要跨平台部署	PyTorch + ONNX	导出为通用 ONNX 格式
+
+三、练习
+1、构建简单的三层神经网络
+使用pytorch构建并训练一个简单的三层全连接神经网络用于识别 MNIST 手写数字图像，并输出在测试集上的准确率。
+（注意：首先在终端通过pip install torch torchvision安装 torch 和torchvision）
+工作：
+（1）请问每行代码添加注释
+（2）请添加更多的网络层、改用不同的激活函数，并比较结果
+（3）请解释epoch与batch的区别
+（4）请尝试不同的训练轮数并根据所学的知识找到最佳的训练轮数，说明依据。
+2、使用keras实现以上三层神经网络
+在pycharm中配置步骤如下：
+（1）使用 Conda 创建一个干净的虚拟环境
+conda create -n tf-env python=3.10
+conda activate tf-env
+（2）使用 pip 安装 TensorFlow：
+pip install tensorflow  # 或 tensorflow-cpu 如果不需要 GPU
+（3）在 PyCharm 中配置 Conda 环境（tf-env）
+① 打开 PyCharm，进入项目。
+② 设置解释器（Interpreter）
+点击顶部菜单栏：File > Settings（或快捷键 Ctrl + Alt + S）。
+左侧导航栏中选择：Project: your_project_name > Python Interpreter。
+选择 Add...。
+选择：Conda Environment，然后选中 "Existing environment"。
+点击右边的文件夹图标，选择路径(请根据自己的开发环境修改)：
+C:\Users\zhoul\Miniconda3\envs\tf-env\python.exe
+确定（OK），然后等待环境加载完成。
+3、请用 PyTorch 构建一个简单卷积神经网络（CNN）用于 MNIST 手写数字识别
+4、用keras实现构建一个简单卷积神经网络（CNN）用于 MNIST 手写数字识别：
+
+
+
+
+

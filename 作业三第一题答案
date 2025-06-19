@@ -1,0 +1,170 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn import datasets
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.preprocessing import StandardScaler
+import matplotlib as mpl
+
+# 设置matplotlib支持中文显示
+plt.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # Mac系统使用Arial Unicode MS字体
+plt.rcParams['axes.unicode_minus'] = False  # 正确显示负号
+
+# 加载鸢尾花数据集
+iris = datasets.load_iris()
+X = iris.data
+y = iris.target
+feature_names = iris.feature_names
+target_names = iris.target_names
+
+# 数据预处理 - 标准化
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# 划分训练集和测试集
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.3, random_state=42)
+
+# ================================
+# (1) 线性判别分析 (LDA)
+# ================================
+print("线性判别分析 (LDA):")
+
+# 创建LDA模型并拟合数据
+lda = LDA(n_components=2)  # 降维到2维
+lda.fit(X_train, y_train)
+
+# 使用LDA转换训练和测试数据
+X_train_lda = lda.transform(X_train)
+X_test_lda = lda.transform(X_test)
+
+# 预测测试集
+y_pred_lda = lda.predict(X_test)
+
+# 评估LDA分类效果
+lda_accuracy = accuracy_score(y_test, y_pred_lda)
+print(f"LDA分类准确率: {lda_accuracy:.4f}")
+print("\nLDA分类报告:")
+print(classification_report(y_test, y_pred_lda, target_names=target_names))
+
+# 可视化LDA降维结果
+plt.figure(figsize=(12, 5))
+plt.subplot(1, 2, 1)
+colors = ['navy', 'turquoise', 'darkorange']
+for color, i, target_name in zip(colors, [0, 1, 2], target_names):
+    plt.scatter(X_train_lda[y_train == i, 0], X_train_lda[y_train == i, 1],
+                alpha=.8, color=color, label=target_name)
+plt.legend(loc='best', shadow=False, scatterpoints=1)
+plt.title('LDA降维可视化 (训练集)', fontsize=12)
+plt.xlabel('LD1', fontsize=10)
+plt.ylabel('LD2', fontsize=10)
+
+# 显示LDA测试集
+plt.subplot(1, 2, 2)
+for color, i, target_name in zip(colors, [0, 1, 2], target_names):
+    plt.scatter(X_test_lda[y_test == i, 0], X_test_lda[y_test == i, 1],
+                alpha=.8, color=color, label=target_name)
+plt.legend(loc='best', shadow=False, scatterpoints=1)
+plt.title('LDA降维可视化 (测试集)', fontsize=12)
+plt.xlabel('LD1', fontsize=10)
+plt.ylabel('LD2', fontsize=10)
+plt.tight_layout()
+
+# 查看LDA解释方差比
+print(f"\nLDA各成分解释方差比: {lda.explained_variance_ratio_}")
+
+# ================================
+# (2) 主成分分析 (PCA)
+# ================================
+print("\n主成分分析 (PCA):")
+
+# 创建PCA模型并拟合数据
+pca = PCA(n_components=2)  # 降维到2维
+X_train_pca = pca.fit_transform(X_train)
+X_test_pca = pca.transform(X_test)
+
+# 在PCA降维后使用简单的分类器进行分类，以便与LDA比较
+lda_after_pca = LDA()
+lda_after_pca.fit(X_train_pca, y_train)
+y_pred_pca = lda_after_pca.predict(X_test_pca)
+
+# 评估PCA降维后的分类效果
+pca_accuracy = accuracy_score(y_test, y_pred_pca)
+print(f"PCA降维后分类准确率: {pca_accuracy:.4f}")
+print("\nPCA降维后分类报告:")
+print(classification_report(y_test, y_pred_pca, target_names=target_names))
+
+# 可视化PCA降维结果
+plt.figure(figsize=(12, 5))
+plt.subplot(1, 2, 1)
+for color, i, target_name in zip(colors, [0, 1, 2], target_names):
+    plt.scatter(X_train_pca[y_train == i, 0], X_train_pca[y_train == i, 1],
+                alpha=.8, color=color, label=target_name)
+plt.legend(loc='best', shadow=False, scatterpoints=1)
+plt.title('PCA降维可视化 (训练集)', fontsize=12)
+plt.xlabel('PC1', fontsize=10)
+plt.ylabel('PC2', fontsize=10)
+
+# 显示PCA测试集
+plt.subplot(1, 2, 2)
+for color, i, target_name in zip(colors, [0, 1, 2], target_names):
+    plt.scatter(X_test_pca[y_test == i, 0], X_test_pca[y_test == i, 1],
+                alpha=.8, color=color, label=target_name)
+plt.legend(loc='best', shadow=False, scatterpoints=1)
+plt.title('PCA降维可视化 (测试集)', fontsize=12)
+plt.xlabel('PC1', fontsize=10)
+plt.ylabel('PC2', fontsize=10)
+plt.tight_layout()
+
+# 查看PCA解释方差比
+print(f"\nPCA各主成分解释方差比: {pca.explained_variance_ratio_}")
+print(f"PCA累计解释方差: {sum(pca.explained_variance_ratio_):.4f}")
+
+# ================================
+# (3) 比较LDA和PCA
+# ================================
+print("\n=====================")
+print("LDA与PCA的比较:")
+print("=====================")
+print(f"LDA分类准确率: {lda_accuracy:.4f}")
+print(f"PCA降维后分类准确率: {pca_accuracy:.4f}")
+
+# 分析主成分和判别轴的特征贡献
+print("\nPCA主成分的特征权重:")
+for i, component in enumerate(pca.components_):
+    print(f"PC{i+1}:", end=" ")
+    for j, name in enumerate(feature_names):
+        print(f"{name}: {component[j]:.4f}", end=", ")
+    print()
+
+print("\nLDA判别轴的特征权重:")
+for i, component in enumerate(lda.coef_):
+    print(f"LD{i+1}:", end=" ")
+    for j, name in enumerate(feature_names):
+        print(f"{name}: {component[j]:.4f}", end=", ")
+    print()
+
+# 可视化方法比较
+plt.figure(figsize=(12, 6))
+plt.subplot(1, 2, 1)
+for color, i, target_name in zip(colors, [0, 1, 2], target_names):
+    plt.scatter(X_train_lda[y_train == i, 0], X_train_lda[y_train == i, 1],
+                alpha=.8, color=color, label=target_name)
+plt.title('LDA降维结果', fontsize=12)
+plt.xlabel('LD1', fontsize=10)
+plt.ylabel('LD2', fontsize=10)
+plt.legend()
+
+plt.subplot(1, 2, 2)
+for color, i, target_name in zip(colors, [0, 1, 2], target_names):
+    plt.scatter(X_train_pca[y_train == i, 0], X_train_pca[y_train == i, 1],
+                alpha=.8, color=color, label=target_name)
+plt.title('PCA降维结果', fontsize=12)
+plt.xlabel('PC1', fontsize=10)
+plt.ylabel('PC2', fontsize=10)
+plt.legend()
+plt.tight_layout()
+
+# 显示所有图像
+plt.show()

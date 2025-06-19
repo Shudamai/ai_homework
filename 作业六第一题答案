@@ -1,0 +1,116 @@
+import random
+
+class KuhnPoker:
+    def __init__(self, max_raises=1):
+        # Deck：三张牌，编号1<2<3
+        self.deck = [1, 2, 3]
+        self.max_raises = max_raises
+
+    def deal(self):
+        random.shuffle(self.deck)
+        # 每人一张牌
+        return self.deck[0], self.deck[1]
+
+    def play_round(self, strategy1, strategy2):
+        """
+        strategyX: 函数(player_card, history, pot, to_move) -> action
+        返回 'check', 'bet', 'call', 'raise', 'fold'
+        history: 行动记录列表，如 ['check', 'bet']
+        pot: 当前彩池筹码数
+        to_move: 1或2，表示当前行动玩家
+        """
+        # 确保没有非可见字符，直接调用 deal()
+        card1, card2 = self.deal()
+        pot = 2  # 各自先下1注作为底注
+        history = []
+        raises = 0
+        to_move = 1
+        while True:
+            action = (strategy1 if to_move == 1 else strategy2)(
+                card1 if to_move == 1 else card2,
+                history.copy(), pot, to_move
+            )
+            history.append(action)
+
+            if action == 'check':
+                # 双方过牌，则摊牌
+                if len(history) >= 2 and history[-2] == 'check':
+                    return self.showdown(card1, card2, pot)
+                to_move = 3 - to_move
+
+            elif action in ('bet', 'raise'):
+                # 投注或加注
+                if action == 'raise':
+                    if raises >= self.max_raises:
+                        raise ValueError('超过最大加注次数')
+                    raises += 1
+                pot += 1
+                to_move = 3 - to_move
+
+            elif action == 'call':
+                # 跟注并摊牌
+                pot += 1
+                return self.showdown(card1, card2, pot)
+
+            elif action == 'fold':
+                # 弃牌
+                winner = 3 - to_move
+                # 返回 (胜者, 玩家1收益, 玩家2收益)
+                if winner == 1:
+                    return 1, pot // 2, -pot // 2
+                else:
+                    return 2, -pot // 2, pot // 2
+
+            else:
+                raise ValueError(f"未知行动: {action}")
+
+    def showdown(self, card1, card2, pot):
+        # 比牌，点数高者赢得彩池
+        if card1 > card2:
+            return 1, pot // 2, -pot // 2
+        else:
+            return 2, -pot // 2, pot // 2
+
+# 示例策略：基于阈值的简单策略
+
+def threshold_strategy(threshold):
+    def strat(card, history, pot, to_move):
+        # 轮次开始，没人行动
+        if not history:
+            return 'bet' if card >= threshold else 'check'
+        last = history[-1]
+        # 如果对手下注/加注
+        if last in ('bet', 'raise'):
+            return 'call' if card >= threshold else 'fold'
+        # 前一轮双方均过牌
+        return 'check'
+    return strat
+
+if __name__ == '__main__':
+    game = KuhnPoker(max_raises=1)
+    # 定义三组实验，每组一对阈值策略
+    experiments = [
+        ('组1 (阈值2 vs 3)', 2, 3),
+        ('组2 (阈值1 vs 3)', 1, 3),
+        ('组3 (阈值1 vs 2)', 1, 2),
+    ]
+    rounds = 10000
+    results = {}
+
+    for name, t1, t2 in experiments:
+        strat1 = threshold_strategy(t1)
+        strat2 = threshold_strategy(t2)
+        win1 = 0
+        win2 = 0
+        for _ in range(rounds):
+            winner, delta1, delta2 = game.play_round(strat1, strat2)
+            if winner == 1:
+                win1 += 1
+            else:
+                win2 += 1
+        results[name] = (win1, win2)
+
+    # 输出结果
+    print(f"每组模拟 {rounds} 局后的胜利次数：")
+    for name, (w1, w2) in results.items():
+        print(f"{name} - 玩家1 胜利: {w1}, 玩家2 胜利: {w2}")

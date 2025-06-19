@@ -1,0 +1,100 @@
+import math
+import heapq
+
+# 图的邻接表
+graph = {
+    'A': {'B': 5, 'D': 3, 'E': 6},
+    'B': {'A': 5, 'C': 5},
+    'C': {'B': 5},
+    'D': {'A': 3, 'F': 4},
+    'E': {'A': 6, 'I': 7, 'G': 3, 'H': 4},
+    'F': {'D': 4, 'G': 4},
+    'G': {'F': 4, 'E': 3, 'H': 3, 'K': 5},
+    'H': {'E': 4, 'J': 7, 'G': 3},
+    'I': {'E': 7, 'J': 5},
+    'J': {'I': 5, 'H': 7, 'K': 3},
+    'K': {'L': 6, 'J': 3, 'G': 5},
+    'L': {'K': 6}
+}
+
+# 每个城市的二维坐标 (假设)
+city_coordinates = {
+    'A': (1, 2),
+    'B': (2, 3),
+    'C': (3, 4),
+    'D': (4, 5),
+    'E': (5, 6),
+    'F': (6, 7),
+    'G': (7, 8),
+    'H': (8, 9),
+    'I': (9, 10),
+    'J': (10, 11),
+    'K': (11, 12),
+    'L': (12, 13)
+}
+
+# 目标城市
+goal = 'K'
+
+# 启发式函数：计算城市之间的欧几里得距离
+def heuristic(city1, city2):
+    x1, y1 = city_coordinates[city1]
+    x2, y2 = city_coordinates[city2]
+    return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+# A*搜索算法
+def a_star_search(graph, start, goal, heuristic):
+    priority_queue = []
+    heapq.heappush(priority_queue, (0, 0, start))
+
+    visited = set()
+    g_score = {city: float('inf') for city in graph}
+    g_score[start] = 0
+
+    path = {}
+
+    while priority_queue:
+        f_n, g_n, current_city = heapq.heappop(priority_queue)
+
+        if current_city == goal:
+            route = []
+            distances = []  # 用于存储每一段的距离
+            node = goal
+            while node != start:
+                route.append(node)
+                dist = heuristic(path[node], node)  # 计算每段的距离
+                distances.append(dist)
+                node = path[node]
+            route.append(start)
+            route.reverse()
+            distances.reverse()  # 路径距离需要反转
+            total_time = sum(distances)  # 总行驶时间为每段距离的和
+            return route, distances, total_time
+
+        if current_city in visited:
+            continue
+        visited.add(current_city)
+
+        for neighbor in graph[current_city]:
+            new_g_score = g_n + graph[current_city][neighbor]  # 实际代价g(n')
+            if new_g_score < g_score[neighbor]:
+                g_score[neighbor] = new_g_score
+                h_n = heuristic(neighbor, goal)  # 启发值（从邻居到目标的估算距离）
+                f_n = new_g_score + h_n
+                heapq.heappush(priority_queue, (f_n, new_g_score, neighbor))
+                path[neighbor] = current_city
+
+    return None, None, float('inf')
+
+# 起始城市和目标城市
+start = 'A'
+
+# 运行A*搜索算法
+route, distances, total_time = a_star_search(graph, start, goal, heuristic)
+
+if route:
+    print(f"从{start}到{goal}的最短行驶时间路径为：{route}")
+    print(f"每一段的行驶距离为：{distances}")
+    print(f"总行驶时间为：{total_time}")
+else:
+    print(f"从{start}到{goal}没有找到路径，时间为：{total_time}")
